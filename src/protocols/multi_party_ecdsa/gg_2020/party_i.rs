@@ -93,9 +93,9 @@ pub struct KeyGenDecommitMessage1 {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct SharedKeys {
-    pub y: Point<Secp256k1>,
-    pub x_i: Scalar<Secp256k1>,
+pub struct SharedKeys<E: Curve> {
+    pub y: Point<E>,
+    pub x_i: Scalar<E>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -326,7 +326,7 @@ impl Keys {
         secret_shares_vec: &[Scalar<Secp256k1>],
         vss_scheme_vec: &[VerifiableSS<Secp256k1>],
         index: usize,
-    ) -> Result<(SharedKeys, DLogProof<Secp256k1, Sha256>), ErrorType> {
+    ) -> Result<(SharedKeys<Secp256k1>, DLogProof<Secp256k1, Sha256>), ErrorType> {
         let mut bad_actors_vec = Vec::new();
         assert_eq!(y_vec.len(), usize::from(params.share_count));
         assert_eq!(secret_shares_vec.len(), usize::from(params.share_count));
@@ -374,7 +374,7 @@ impl Keys {
         let mut global_coefficients = head[0].commitments.clone();
         for vss in tail {
             for (i, coefficient_commitment) in vss.commitments.iter().enumerate() {
-                global_coefficients[i] = &global_coefficients[i] + &*coefficient_commitment;
+                global_coefficients[i] = &global_coefficients[i] + coefficient_commitment;
             }
         }
 
@@ -439,7 +439,7 @@ impl Keys {
 }
 
 impl PartyPrivate {
-    pub fn set_private(key: Keys, shared_key: SharedKeys) -> Self {
+    pub fn set_private(key: Keys, shared_key: SharedKeys<Secp256k1>) -> Self {
         Self {
             u_i: key.u_i,
             x_i: shared_key.x_i,
@@ -894,7 +894,7 @@ impl LocalSignature {
          2. if (s > curve.q / 2) id = id ^ 1
         */
         let is_ry_odd = ry.test_bit(0);
-        let mut recid = if is_ry_odd { 1 } else { 0 };
+        let mut recid = u8::from(is_ry_odd);
         let s_tag_bn = Scalar::<Secp256k1>::group_order() - &s_bn;
         if s_bn > s_tag_bn {
             s = Scalar::<Secp256k1>::from(&s_tag_bn);

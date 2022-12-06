@@ -2,11 +2,12 @@ use std::convert::TryInto;
 
 use anyhow::{Context, Result};
 use futures::{Sink, Stream, StreamExt, TryStreamExt};
+use opentelemetry::global;
+use opentelemetry::trace::{TraceContextExt, Tracer};
+use opentelemetry::Key;
+use round_based::Msg;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use structopt::StructOpt;
-
-use round_based::Msg;
-
 pub async fn join_computation<M>(
     address: surf::Url,
     room_id: &str,
@@ -42,6 +43,16 @@ where
     // Construct channel of outgoing messages
     let outgoing = futures::sink::unfold(client, |client, message: Msg<M>| async move {
         let serialized = serde_json::to_string(&message).context("serialize message")?;
+        let round_tracer = global::tracer("outgoing msg");
+
+        round_tracer.in_span("outgoing", |ctx| {
+            let span = ctx.span();
+            span.add_event(
+                "Round1 message",
+                vec![Key::new("Msg").string(serialized.clone())],
+            );
+        });
+
         client
             .broadcast(&serialized)
             .await

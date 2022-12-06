@@ -34,13 +34,15 @@ struct Cli {
     threshold: u16,
     #[structopt(short, long)]
     number_of_parties: u16,
+    #[structopt(short, long)]
+    role: u8,
 }
 
 fn init_tracer() -> Result<sdktrace::Tracer, TraceError> {
     opentelemetry_jaeger::new_agent_pipeline()
         // .with_endpoint("66.42.55.28:6831")
         .with_auto_split_batch(true) // Auto split batches so they fit under packet size
-        .with_service_name("key-generate1")
+        .with_service_name("key-reshaing")
         .install_batch(opentelemetry::runtime::Tokio)
 }
 
@@ -58,6 +60,7 @@ async fn main() -> Result<()> {
         .open(args.output)
         .await
         .context("cannot create output file")?;
+
     let (_i, incoming, outgoing) = join_computation(args.address, &args.room)
         .await
         .context("join computation")?;
