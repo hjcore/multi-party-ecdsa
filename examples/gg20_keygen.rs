@@ -23,8 +23,8 @@ use opentelemetry::trace::{FutureExt, TraceError};
 use opentelemetry::trace::{TraceContextExt, Tracer};
 use opentelemetry::Key;
 
-use opentelemetry::{Context as o_ctx, KeyValue};
-use opentelemetry_otlp::{ExportConfig, WithExportConfig};
+use opentelemetry::Context as o_ctx;
+use opentelemetry_otlp::WithExportConfig;
 
 #[derive(Debug, StructOpt)]
 struct Cli {
