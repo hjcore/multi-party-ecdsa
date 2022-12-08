@@ -83,27 +83,3 @@ round-based = { version = "0.1.4", features = ["dev"] }
 [[example]]
 name = "common"
 crate-type = ["lib"]
-
-[[bench]]
-name = "cclst_keygen"
-path = "benches/two_party_ecdsa/cclst_2019/keygen.rs"
-required-features = ["cclst"]
-harness = false
-
-[[bench]]
-name = "cclst_sign"
-path = "benches/two_party_ecdsa/cclst_2019/sign.rs"
-required-features = ["cclst"]
-harness = false
-
-
-[[bench]]
-name = "lindel2017_keygen"
-path = "benches/two_party_ecdsa/lindell_2017/keygen.rs"
-harness = false
-
-
-[[bench]]
-name = "lindel2017_sign"
-path = "benches/two_party_ecdsa/lindell_2017/sign.rs"
-harness = false

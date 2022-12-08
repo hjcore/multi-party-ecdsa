@@ -11,11 +11,11 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v2
 
-      - name: Install stable toolchain
+      - name: Install nightly toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.63.0
+          toolchain: nightly
           target: wasm32-unknown-unknown
           override: true
 
@@ -42,11 +42,11 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v2
 
-      - name: Install stable toolchain
+      - name: Install nightly toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.63.0
+          toolchain: nightly
           override: true
           components: rustfmt, clippy
 
