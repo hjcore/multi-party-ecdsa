@@ -12,6 +12,8 @@ mod tests {
     use curv::cryptographic_primitives::secret_sharing::feldman_vss::{
         ShamirSecretSharing, VerifiableSS,
     };
+    use curv::elliptic::curves::Point;
+    use curv::elliptic::curves::Scalar;
 
     use curv::elliptic::curves::Secp256k1;
     use curv::BigInt;
@@ -217,7 +219,10 @@ mod tests {
         simulation.enable_benchmarks(false);
 
         for i in 1..=n {
-            simulation.add_party(Keygen::new(i, t, n).unwrap());
+            let u = Scalar::<Secp256k1>::random();
+            let y = Point::<Secp256k1>::generator() * &u;
+
+            simulation.add_party(Keygen::new(y, u, i, t, n).unwrap());
         }
 
         simulation.run().unwrap()

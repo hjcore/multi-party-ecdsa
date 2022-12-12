@@ -21,6 +21,8 @@ pub struct Round0 {
     pub party_i: u16,
     pub t: u16,
     pub n: u16,
+    pub ge: Point<Secp256k1>,
+    pub fe: Scalar<Secp256k1>,
 }
 
 impl Round0 {
@@ -28,7 +30,7 @@ impl Round0 {
     where
         O: Push<Msg<gg_2020::party_i::KeyGenBroadcastMessage1>>,
     {
-        let party_keys = Keys::create(self.party_i as usize);
+        let party_keys = Keys::create_from(self.fe, self.ge, self.party_i as usize);
         let (bc1, decom1) =
             party_keys.phase1_broadcast_phase3_proof_of_correct_key_proof_of_correct_h1h2();
 

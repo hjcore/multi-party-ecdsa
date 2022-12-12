@@ -1,5 +1,6 @@
 //! High-level keygen protocol implementation
 
+use curv::elliptic::curves::Point;
 use std::fmt;
 use std::mem::replace;
 use std::time::Duration;
@@ -45,17 +46,23 @@ pub struct Keygen {
 }
 
 impl Keygen {
-    /// Constructs a party of keygen protocol
+    /// Constructs a party of keygen protocol by the given key
     ///
     /// Takes party index `i` (in range `[1; n]`), threshold value `t`, and total number of
     /// parties `n`. Party index identifies this party in the protocol, so it must be guaranteed
-    /// to be unique.
+    /// to be unique. `key` is the input keypair for the ecdsa
     ///
     /// Returns error if:
     /// * `n` is less than 2, returns [Error::TooFewParties]
     /// * `t` is not in range `[1; n-1]`, returns [Error::InvalidThreshold]
     /// * `i` is not in range `[1; n]`, returns [Error::InvalidPartyIndex]
-    pub fn new(i: u16, t: u16, n: u16) -> Result<Self> {
+    pub fn new(
+        ge: Point<Secp256k1>,
+        fe: Scalar<Secp256k1>,
+        i: u16,
+        t: u16,
+        n: u16,
+    ) -> Result<Self> {
         let tracer = global::tracer("keygen new");
 
         if n < 2 {
@@ -68,7 +75,13 @@ impl Keygen {
             return Err(Error::InvalidPartyIndex);
         }
         let mut state = Self {
-            round: R::Round0(Round0 { party_i: i, t, n }),
+            round: R::Round0(Round0 {
+                party_i: i,
+                t,
+                n,
+                ge,
+                fe,
+            }),
 
             msgs1: Some(Round1::expects_messages(i, n)),
             msgs2: Some(Round2::expects_messages(i, n)),
@@ -561,7 +574,10 @@ pub mod test {
         simulation.enable_benchmarks(true);
 
         for i in 1..=n {
-            simulation.add_party(Keygen::new(i, t, n).unwrap());
+            let u = Scalar::<Secp256k1>::random();
+            let y = Point::<Secp256k1>::generator() * &u;
+
+            simulation.add_party(Keygen::new(y, u, i, t, n).unwrap());
         }
 
         let keys = simulation.run().unwrap();

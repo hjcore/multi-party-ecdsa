@@ -192,7 +192,6 @@ pub fn commitment_unknown_order(
 mod test {
     use super::*;
     use crate::protocols::multi_party_ecdsa::gg_2020::state_machine::reshaing::PAILLIER_KEY_SIZE;
-    use curv::elliptic::curves::secp256_k1::{Secp256k1Point, Secp256k1Scalar};
     use curv::BigInt;
     use paillier::core::Randomness;
     use paillier::traits::{EncryptWithChosenRandomness, KeyGeneration};
