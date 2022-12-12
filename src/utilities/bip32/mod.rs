@@ -39,10 +39,9 @@ pub fn hd_key(
 
     let f = Hmac::<Sha512>::new_from_slice(&chain_code_bi.to_bytes())
         .unwrap()
-        .chain_bigint(&pub_key_bi)
+        .chain_bigint(pub_key_bi)
         .chain_bigint(&first)
         .result_bigint();
-    // let f = hmac_sha512::HMacSha512::create_hmac(&chain_code_bi, &[&pub_key_bi, &first]);
     let f_l = &f >> 256;
     let f_r = &f & &mask;
     let f_l_fe = Scalar::<Secp256k1>::from(&f_l);
@@ -61,8 +60,8 @@ pub fn hd_key(
 
                 let f = Hmac::<Sha512>::new_from_slice(&acc.2.to_bytes(true))
                     .unwrap()
-                    .chain_bigint(&pub_key_bi)
-                    .chain_bigint(&index)
+                    .chain_bigint(pub_key_bi)
+                    .chain_bigint(index)
                     .result_bigint();
 
                 let f_l = &f >> 256;
