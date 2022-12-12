@@ -40,12 +40,16 @@ round-based = { version = "0.1.4", features = [] }
 thiserror = "1.0.23"
 derivative = "2"
 sha2 = "0.9"
-opentelemetry = {version = "0.18.0", features = ["rt-tokio", "metrics"]}                # A metrics collection and distributed tracing framework
-opentelemetry-otlp = "0.11.0"           # Exporter for the OpenTelemetry Collector
+async-std = { version = "1.12.0", features = ["attributes"] }
+opentelemetry = {version = "0.18.0", features = ["rt-tokio", "rt-async-std"]}                # A metrics collection and distributed tracing framework
+opentelemetry-otlp ={version = "0.11.0", features = ["tonic", "trace", "tls", "tls-roots"]}           # Exporter for the OpenTelemetry Collector
+tonic = {version = "0.8.0", features = ["tls"]}
 opentelemetry-jaeger = {version = "0.17.0", features = ["rt-tokio"]}         # Jaeger exporter for OpenTelemetry
 tokio = { version = "1.0", features = ["full"] }
 serde_derive = "1.0.102"
 serde_json = "1.0"
+opentelemetry-semantic-conventions = "0.10.0"    # Semantic conventions for OpenTelemetry
+url = "2.3.1"                 # URL library for Rust, based on the WHATWG URL Standard
 
 [dependencies.bitvec]
 version = "1"
