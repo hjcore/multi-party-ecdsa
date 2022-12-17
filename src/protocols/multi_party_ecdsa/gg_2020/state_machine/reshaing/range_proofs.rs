@@ -17,6 +17,7 @@ use curv::elliptic::curves::Point;
 use curv::elliptic::curves::Scalar;
 use curv::elliptic::curves::{Curve, Secp256k1};
 use curv::BigInt;
+use curv::HashChoice;
 use paillier::{EncryptionKey, Randomness};
 use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
@@ -98,13 +99,16 @@ impl AliceZkpRound2 {
 
 /// Alice's proof
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(bound = "")]
 pub struct AliceProof<E: Curve, H: Digest + Clone> {
     z: BigInt,
     e: BigInt,
     s: BigInt,
     s1: BigInt,
     s2: BigInt,
-    _phantom: PhantomData<(E, H)>,
+    _phantom: PhantomData<E>,
+    #[serde(skip)]
+    pub hash_choice: HashChoice<H>,
 }
 
 impl<E: Curve, H: Digest + Clone> AliceProof<E, H> {
@@ -198,6 +202,7 @@ impl<E: Curve, H: Digest + Clone> AliceProof<E, H> {
             s1: round2.s1,
             s2: round2.s2,
             _phantom: PhantomData,
+            hash_choice: HashChoice::new(),
         }
     }
 }

@@ -7,6 +7,7 @@
 //! witness (x, r) such that Q = xG, c = Enc(pk, x, r)
 //! note that because of the range proof, the proof has a slack in the range: x in [-q^3, q^3]
 
+use curv::HashChoice;
 use std::marker::PhantomData;
 
 use crate::protocols::multi_party_ecdsa::gg_2020::state_machine::reshaing::error::{
@@ -39,6 +40,7 @@ pub struct PDLwSlackWitness<E: Curve = Secp256k1> {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(bound = "")]
 pub struct PDLwSlackProof<E: Curve, H: Digest + Clone> {
     z: BigInt,
     u1: Point<E>,
@@ -47,7 +49,9 @@ pub struct PDLwSlackProof<E: Curve, H: Digest + Clone> {
     s1: BigInt,
     s2: BigInt,
     s3: BigInt,
-    _phantom: PhantomData<H>,
+    _phantom: PhantomData<E>,
+    #[serde(skip)]
+    pub hash_choice: HashChoice<H>,
 }
 
 impl<E: Curve, H: Digest + Clone> PDLwSlackProof<E, H> {
@@ -108,6 +112,7 @@ impl<E: Curve, H: Digest + Clone> PDLwSlackProof<E, H> {
             s2,
             s3,
             _phantom: PhantomData,
+            hash_choice: HashChoice::new(),
         }
     }
 

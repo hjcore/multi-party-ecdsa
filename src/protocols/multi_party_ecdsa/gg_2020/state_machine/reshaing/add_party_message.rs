@@ -25,6 +25,7 @@ use curv::cryptographic_primitives::secret_sharing::feldman_vss::{
 };
 use curv::elliptic::curves::{Curve, Point, Scalar};
 use curv::BigInt;
+use curv::HashChoice;
 use paillier::{Decrypt, EncryptionKey, KeyGeneration, Paillier};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -42,6 +43,8 @@ pub struct JoinMessage<E: Curve, H: Digest + Clone, const M: usize> {
     pub(crate) composite_dlog_proof_base_h2: CompositeDLogProof,
     pub(crate) ring_pedersen_statement: RingPedersenStatement<E, H>,
     pub(crate) ring_pedersen_proof: RingPedersenProof<E, H, M>,
+    #[serde(skip)]
+    pub hash_choice: HashChoice<H>,
 }
 
 /// Generates the parameters needed for the h1_h2_N_tilde_vec. These parameters can be seen as
@@ -118,6 +121,7 @@ impl<E: Curve, H: Digest + Clone, const M: usize> JoinMessage<E, H, M> {
             ring_pedersen_statement,
             ring_pedersen_proof,
             party_index: None,
+            hash_choice: HashChoice::new(),
         };
 
         (join_message, paillier_key_pair)

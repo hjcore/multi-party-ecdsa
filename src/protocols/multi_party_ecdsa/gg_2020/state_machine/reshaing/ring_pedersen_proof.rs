@@ -17,6 +17,7 @@ use curv::cryptographic_primitives::hashing::Digest;
 use curv::cryptographic_primitives::hashing::DigestExt;
 use curv::elliptic::curves::Curve;
 use curv::BigInt;
+use curv::HashChoice;
 use paillier::EncryptionKey;
 use paillier::{KeyGeneration, Paillier};
 use serde::{Deserialize, Serialize};
@@ -27,13 +28,16 @@ use crate::protocols::multi_party_ecdsa::gg_2020::state_machine::reshaing::error
 };
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(bound = "")]
 pub struct RingPedersenStatement<E: Curve, H: Digest + Clone> {
     pub S: BigInt,
     pub T: BigInt,
     pub N: BigInt,
     phi: BigInt,
     pub ek: EncryptionKey,
-    phantom: PhantomData<(E, H)>,
+    phantom: PhantomData<E>,
+    #[serde(skip)]
+    pub hash_choice: HashChoice<H>,
 }
 #[allow(dead_code)]
 pub struct RingPedersenWitness<E: Curve, H: Digest + Clone> {
@@ -61,6 +65,7 @@ impl<E: Curve, H: Digest + Clone> RingPedersenStatement<E, H> {
                 phi,
                 ek: ek_tilde,
                 phantom: PhantomData,
+                hash_choice: HashChoice::new(),
             },
             RingPedersenWitness {
                 p: dk_tilde.p,
@@ -73,10 +78,13 @@ impl<E: Curve, H: Digest + Clone> RingPedersenStatement<E, H> {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(bound = "")]
 pub struct RingPedersenProof<E: Curve, H: Digest + Clone, const M: usize> {
     A: Vec<BigInt>,
     Z: Vec<BigInt>,
-    phantom: PhantomData<(E, H)>,
+    _phantom: PhantomData<E>,
+    #[serde(skip)]
+    pub hash_choice: HashChoice<H>,
 }
 
 // Link to the UC non-interactive threshold ECDSA paper
@@ -115,7 +123,8 @@ impl<E: Curve, H: Digest + Clone, const M: usize> RingPedersenProof<E, H, M> {
         Self {
             A: A.to_vec(),
             Z: Z.to_vec(),
-            phantom: PhantomData,
+            _phantom: PhantomData,
+            hash_choice: HashChoice::new(),
         }
     }
 

@@ -1,7 +1,9 @@
 use std::path::PathBuf;
 
 use anyhow::{anyhow, Context, Result};
+use curv::elliptic::curves::Secp256k1;
 use futures::{SinkExt, StreamExt, TryStreamExt};
+use multi_party_ecdsa::protocols::multi_party_ecdsa::gg_2020::state_machine::keygen::LocalKey;
 use structopt::StructOpt;
 
 use curv::arithmetic::Converter;
@@ -29,6 +31,8 @@ struct Cli {
     parties: Vec<u16>,
     #[structopt(short, long)]
     data_to_sign: String,
+    #[structopt(short, long)]
+    sign_index: Option<u16>,
 }
 
 #[tokio::main]
@@ -37,7 +41,8 @@ async fn main() -> Result<()> {
     let local_share = tokio::fs::read(args.local_share)
         .await
         .context("cannot read local share")?;
-    let local_share = serde_json::from_slice(&local_share).context("parse local share")?;
+    let local_share: LocalKey<Secp256k1> =
+        serde_json::from_slice(&local_share).context("parse local share")?;
     let number_of_parties = args.parties.len();
 
     let (i, incoming, outgoing) =
@@ -49,7 +54,11 @@ async fn main() -> Result<()> {
     tokio::pin!(incoming);
     tokio::pin!(outgoing);
 
-    let signing = OfflineStage::new(i, args.parties, local_share)?;
+    let signing = OfflineStage::new(
+        args.sign_index.unwrap_or(local_share.i),
+        args.parties,
+        local_share,
+    )?;
     let completed_offline_stage = AsyncProtocol::new(signing, incoming, outgoing)
         .run()
         .await
