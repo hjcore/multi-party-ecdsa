@@ -197,14 +197,14 @@ impl Keys {
             xhi_inv,
         }
     }
-    pub fn create_from(u: Scalar<Secp256k1>, index: usize) -> Self {
-        let y = Point::generator() * &u;
+
+    pub fn create_from(fe: Scalar<Secp256k1>, ge: Point<Secp256k1>, index: usize) -> Self {
         let (ek, dk) = Paillier::keypair().keys();
         let (N_tilde, h1, h2, xhi, xhi_inv) = generate_h1_h2_N_tilde();
 
         Self {
-            u_i: u,
-            y_i: y,
+            u_i: fe,
+            y_i: ge,
             dk,
             ek,
             party_index: index,

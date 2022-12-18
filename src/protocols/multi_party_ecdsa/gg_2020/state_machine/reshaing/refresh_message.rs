@@ -30,26 +30,31 @@ use zeroize::Zeroize;
 use zk_paillier::zkproofs::{DLogStatement, NiCorrectKeyProof, SALT_STRING};
 // Everything here can be broadcasted
 #[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(bound = "")]
 pub struct RefreshMessage<E: Curve, H: Digest + Clone, const M: usize> {
-    pub(crate) old_party_index: u16,
-    pub(crate) party_index: u16,
-    pdl_proof_vec: Vec<PDLwSlackProof<E, H>>,
-    range_proofs: Vec<AliceProof<E, H>>,
-    coefficients_committed_vec: VerifiableSS<E>,
-    pub(crate) points_committed_vec: Vec<Point<E>>,
-    points_encrypted_vec: Vec<BigInt>,
-    dk_correctness_proof: NiCorrectKeyProof,
-    pub(crate) dlog_statement: DLogStatement,
-    pub(crate) ek: EncryptionKey,
-    pub(crate) remove_party_indices: Vec<u16>,
-    pub(crate) public_key: Point<E>,
-    pub(crate) ring_pedersen_statement: RingPedersenStatement<E, H>,
-    pub(crate) ring_pedersen_proof: RingPedersenProof<E, H, M>,
+    pub old_party_index: u16,
+    pub party_index: u16,
+    pub pdl_proof_vec: Vec<PDLwSlackProof<E, H>>,
+    pub range_proofs: Vec<AliceProof<E, H>>,
+    pub coefficients_committed_vec: VerifiableSS<E>,
+    pub points_committed_vec: Vec<Point<E>>,
+    pub points_encrypted_vec: Vec<BigInt>,
+    pub dk_correctness_proof: NiCorrectKeyProof,
+    pub dlog_statement: DLogStatement,
+    pub ek: EncryptionKey,
+    pub remove_party_indices: Vec<u16>,
+    pub public_key: Point<E>,
+    pub ring_pedersen_statement: RingPedersenStatement<E, H>,
+    pub ring_pedersen_proof: RingPedersenProof<E, H, M>,
     #[serde(skip)]
     pub hash_choice: HashChoice<H>,
 }
 
 impl<E: Curve, H: Digest + Clone, const M: usize> RefreshMessage<E, H, M> {
+    pub fn add_remove_party_indices(&mut self, indices: Vec<u16>) {
+        self.remove_party_indices = indices;
+    }
+
     pub fn distribute(
         old_party_index: u16,
         local_key: &mut LocalKey<E>,

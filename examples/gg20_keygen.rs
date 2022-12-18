@@ -1,7 +1,9 @@
 use anyhow::{anyhow, Context, Result};
+use curv::elliptic::curves::Point;
+use curv::{arithmetic::Converter, BigInt};
 use futures::StreamExt;
+use multi_party_ecdsa::utilities::bip32;
 use std::path::PathBuf;
-use std::vec;
 use structopt::StructOpt;
 
 use multi_party_ecdsa::protocols::multi_party_ecdsa::gg_2020::state_machine::keygen::Keygen;
@@ -10,14 +12,8 @@ use round_based::async_runtime::AsyncProtocol;
 mod gg20_sm_client;
 use gg20_sm_client::join_computation;
 mod common;
+use curv::elliptic::curves::{secp256_k1::Secp256k1, Scalar};
 use opentelemetry::global;
-use opentelemetry::sdk::trace as sdktrace;
-use opentelemetry::trace::{FutureExt, TraceError};
-use opentelemetry::Key;
-use opentelemetry::{
-    trace::{TraceContextExt, Tracer},
-    Context as o_ctx,
-};
 
 #[derive(Debug, StructOpt)]
 struct Cli {
@@ -34,23 +30,12 @@ struct Cli {
     threshold: u16,
     #[structopt(short, long)]
     number_of_parties: u16,
-}
-
-fn init_tracer() -> Result<sdktrace::Tracer, TraceError> {
-    opentelemetry_jaeger::new_agent_pipeline()
-        // .with_endpoint("66.42.55.28:6831")
-        .with_auto_split_batch(true) // Auto split batches so they fit under packet size
-        .with_service_name("key-generate1")
-        .install_batch(opentelemetry::runtime::Tokio)
+    #[structopt(short, long)]
+    derivation_path: Option<String>,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let tracer = init_tracer()?;
-
-    let span = tracer.start("root");
-    let cx = o_ctx::current_with_span(span);
-
     let args: Cli = Cli::from_args();
     let mut output_file = tokio::fs::OpenOptions::new()
         .write(true)
@@ -66,30 +51,30 @@ async fn main() -> Result<()> {
     tokio::pin!(incoming);
     tokio::pin!(outgoing);
 
-    let s_span = cx.span();
+    // add bip32 derive extended private key
+    // derive bip32 path
+    let base_u = Scalar::<Secp256k1>::random();
+    let base_y = Point::<Secp256k1>::generator() * &base_u;
 
-    s_span.add_event("keygen staring".to_string(), vec![]);
+    let (ge, fe) = if let Some(path) = args.derivation_path {
+        let path_vector: Vec<BigInt> = path
+            .split('/')
+            .map(|s| BigInt::from_str_radix(s.trim(), 10).unwrap())
+            .collect();
+        bip32::get_hd_key(base_y, path_vector)
+    } else {
+        (base_y, base_u)
+    };
 
-    s_span.add_event(
-        "cli-properties".to_string(),
-        vec![
-            Key::new("index").i64(args.index as i64),
-            Key::new("threshold").i64(args.threshold as i64),
-            Key::new("number_of_parties").i64(args.number_of_parties as i64),
-        ],
-    );
-
-    let keygen = Keygen::new(args.index, args.threshold, args.number_of_parties)?;
+    let keygen = Keygen::new(ge, fe, args.index, args.threshold, args.number_of_parties)?;
 
     let output = AsyncProtocol::new(keygen, incoming, outgoing)
         .run()
-        .with_context(cx.clone())
         .await
         .map_err(|e| anyhow!("protocol execution terminated with error: {}", e))?;
     let output = serde_json::to_vec_pretty(&output).context("serialize output")?;
 
     tokio::io::copy(&mut output.as_slice(), &mut output_file)
-        .with_context(cx)
         .await
         .context("save output to file")?;
 

@@ -12,6 +12,10 @@ mod tests {
     use curv::cryptographic_primitives::secret_sharing::feldman_vss::{
         ShamirSecretSharing, VerifiableSS,
     };
+    use curv::elliptic::curves::Point;
+    use curv::elliptic::curves::Scalar;
+    use std::fs::File;
+    use std::io::Write;
 
     use curv::elliptic::curves::Secp256k1;
     use curv::BigInt;
@@ -70,17 +74,41 @@ mod tests {
         simulate_signing(offline_sign, b"ZenGo");
     }
 
+    use std::fs;
+    #[test]
+    fn test_sign() {
+        let t = 5;
+        let n = 2;
+
+        let mut keys = vec![];
+        for i in 1..t + 1 {
+            let k = fs::read_to_string(format!("../local-share{}-dkr.json", i)).unwrap();
+
+            let local_share: LocalKey<Secp256k1> = serde_json::from_str(&k).unwrap();
+            keys.push(local_share);
+        }
+
+        let offline_sign = simulate_offline_stage(keys.clone(), &[2, 3, 4, 5]);
+        simulate_signing(offline_sign, b"ZenGo");
+    }
+
     #[test]
     fn test_remove_sign_rotate_sign() {
         let mut keys = simulate_keygen(2, 5);
         let offline_sign = simulate_offline_stage(keys.clone(), &[1, 2, 3]);
         simulate_signing(offline_sign, b"ZenGo");
-        simulate_dkr_removal::<{ M_SECURITY }>(&mut keys, [1].to_vec());
-        let offline_sign = simulate_offline_stage(keys.clone(), &[2, 3, 4]);
+        simulate_dkr_removal::<{ M_SECURITY }>(&mut keys, [4].to_vec());
+        for (i, k) in keys.iter().enumerate() {
+            let mut file = File::create(format!("./key-{}.json", i + 1)).unwrap();
+            let output = serde_json::to_vec_pretty(k).unwrap();
+            file.write(&output).unwrap();
+        }
+
+        let offline_sign = simulate_offline_stage(keys.clone(), &[1, 3, 4]);
         simulate_signing(offline_sign, b"ZenGo");
-        simulate_dkr_removal::<{ M_SECURITY }>(&mut keys, [1, 2].to_vec());
-        let offline_sign = simulate_offline_stage(keys, &[3, 4, 5]);
-        simulate_signing(offline_sign, b"ZenGo");
+        // simulate_dkr_removal::<{ M_SECURITY }>(&mut keys, [1, 2].to_vec());
+        // let offline_sign = simulate_offline_stage(keys, &[1, 4, 5]);
+        // simulate_signing(offline_sign, b"ZenGo");
     }
 
     #[test]
@@ -217,7 +245,10 @@ mod tests {
         simulation.enable_benchmarks(false);
 
         for i in 1..=n {
-            simulation.add_party(Keygen::new(i, t, n).unwrap());
+            let u = Scalar::<Secp256k1>::random();
+            let y = Point::<Secp256k1>::generator() * &u;
+
+            simulation.add_party(Keygen::new(y, u, i, t, n).unwrap());
         }
 
         simulation.run().unwrap()
@@ -343,14 +374,15 @@ mod tests {
 
     fn simulate_signing(offline: Vec<CompletedOfflineStage>, message: &[u8]) {
         let message = create_hash(&[&BigInt::from_bytes(message)]);
-        let pk = &offline[0].public_key();
 
         let parties = offline
+            .clone()
             .iter()
             .map(|o| SignManual::new(message.clone(), o.clone()))
             .collect::<Result<Vec<_>, _>>()
             .unwrap();
-        let (parties, local_sigs): (Vec<_>, Vec<_>) = parties.into_iter().unzip();
+
+        let (parties, local_sigs): (Vec<_>, Vec<_>) = parties.clone().into_iter().unzip();
         // parties.remove(0).complete(&local_sigs[1..]).unwrap();
         let local_sigs_except = |i: usize| {
             let mut v = vec![];
@@ -361,11 +393,17 @@ mod tests {
             v
         };
 
-        assert!(parties
-            .into_iter()
-            .enumerate()
-            .map(|(i, p)| p.complete(&local_sigs_except(i)).unwrap())
-            .all(|signature| verify(&signature, &pk, &message).is_ok()));
+        for i in 0..offline.len() {
+            let offlice_i = offline[i].clone();
+            let pk = offlice_i.public_key();
+
+            assert!(parties
+                .clone()
+                .into_iter()
+                .enumerate()
+                .map(|(i, p)| p.complete(&local_sigs_except(i)).unwrap())
+                .all(|signature| verify(&signature, &pk, &message).is_ok()));
+        }
     }
 
     fn create_hash(big_ints: &[&BigInt]) -> BigInt {
